@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Dinozor Tarzı Koşu Oyunu</title>
+  <style>
+    body { margin:0; overflow:hidden; background:#eee; }
+    canvas { display:block; margin:0 auto; }
+  </style>
+</head>
+<body>
+<canvas id="gameCanvas" width="800" height="400"></canvas>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+// PNG görsellerini yükle
+const runnerImg = new Image();
+runnerImg.src = "runner.png";
+
+const obstacleImg = new Image();
+obstacleImg.src = "obstacle.png";
+
+const itemImg = new Image();
+itemImg.src = "item.png";
+
+const powerImg = new Image();
+powerImg.src = "power.png";
+
+// Arka plan PNG
+const bgImg = new Image();
+bgImg.src = "background.png"; // 
+
+let useBgImage = false; // varsayılan olarak arka plan PNG kapalı
+let backgroundColor = "#cceeff"; // varsayılan renk
+
+// Oyun değişkenleri
+let runner, gravity, jumpStrength, velocityY, isJumping;
+let obstacles, items, powers, score, gameOver;
+
+function resetGame(){
+  runner = { x:100, y:300, width:50, height:50, speed:5 };
+  gravity = 0.5;
+  jumpStrength = -12;
+  velocityY = 0;
+  isJumping = false;
+  obstacles = [];
+  items = [];
+  powers = [];
+  score = 0;
+  gameOver = false;
+  useBgImage = false;
+  backgroundColor = "#cceeff";
+}
+resetGame();
+
+// Klavye kontrolü
+document.addEventListener("keydown", e => {
+  if(e.code === "Space" && !isJumping && !gameOver){
+    velocityY = jumpStrength;
+    isJumping = true;
+  }
+});
+
+// Rastgele obje üretimi
+function spawnObstacle(){
+  if(gameOver) return;
+  obstacles.push({ x:800, y:280, width:60, height:60 });
+}
+function spawnItem(){
+  if(gameOver) return;
+  items.push({ x:800, y:250, width:30, height:30 });
+}
+function spawnPower(){
+  if(gameOver) return;
+  powers.push({ x:800, y:200, width:30, height:30 });
+}
+
+// Çizim fonksiyonu
+function draw(){
+  if(useBgImage){
+    ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+  } else {
+    ctx.fillStyle = backgroundColor;
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+  }
+
+  ctx.drawImage(runnerImg, runner.x, runner.y, runner.width, runner.height);
+
+  obstacles.forEach(ob=>{
+    ctx.drawImage(obstacleImg, ob.x, ob.y, ob.width, ob.height);
+  });
+
+  items.forEach(item=>{
+    ctx.drawImage(itemImg, item.x, item.y, item.width, item.height);
+  });
+
+  powers.forEach(power=>{
+    ctx.drawImage(powerImg, power.x, power.y, power.width, power.height);
+  });
+
+  ctx.fillStyle="black";
+  ctx.font="20px Arial";
+  ctx.fillText("Skor: "+score, 10, 30);
+
+  if(gameOver){
+    ctx.fillStyle="red";
+    ctx.font="30px Arial";
+    ctx.fillText("Oyun Bitti! Skor: "+score, 250, 200);
+    ctx.fillText("Yeniden başlamak için SPACE'e bas", 180, 240);
+  }
+}
+
+// Güncelleme fonksiyonu
+function update(){
+  if(gameOver) return;
+
+  runner.y += velocityY;
+  velocityY += gravity;
+  if(runner.y >= 300){
+    runner.y = 300;
+    isJumping = false;
+  }
+
+  obstacles.forEach(ob=> ob.x -= runner.speed);
+  items.forEach(item=> item.x -= runner.speed);
+  powers.forEach(power=> power.x -= runner.speed);
+
+  // Çarpışma kontrolü
+  obstacles.forEach(ob=>{
+    if(runner.x < ob.x+ob.width &&
+       runner.x+runner.width > ob.x &&
+       runner.y < ob.y+ob.height &&
+       runner.y+runner.height > ob.y){
+         gameOver = true;
+    }
+  });
+
+  items = items.filter(item=>{
+    if(runner.x < item.x+item.width &&
+       runner.x+runner.width > item.x &&
+       runner.y < item.y+item.height &&
+       runner.y+runner.height > item.y){
+         score += 10;
+         return false;
+    }
+    return true;
+  });
+
+  powers = powers.filter(power=>{
+    if(runner.x < power.x+power.width &&
+       runner.x+runner.width > power.x &&
+       runner.y < power.y+power.height &&
+       runner.y+runner.height > power.y){
+         
+         // Özel güç etkisi: PNG arka plan + zıplama gücü 2 tık artar
+         useBgImage = true;
+         jumpStrength -= 2;
+
+         setTimeout(()=>{
+           useBgImage = false;
+           jumpStrength += 2;
+         },3000);
+
+         return false;
+    }
+    return true;
+  });
+}
+
+// Oyun döngüsü
+setInterval(()=>{
+  update();
+  draw();
+},1000/60);
+
+// Rastgele üretim
+setInterval(spawnObstacle,2000);
+setInterval(spawnItem,3000);
+setInterval(spawnPower,7000);
+
+// Game over sonrası yeniden başlatma
+document.addEventListener("keydown", e=>{
+  if(e.code === "Space" && gameOver){
+    resetGame();
+  }
+});
+</script>
+</body>
+</html>
